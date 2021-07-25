@@ -9,7 +9,7 @@
 #include<cxxabi.h>
 
 template<typename... Types>
-std::ostream& output(std::ostream& out, Types... args){
+inline std::ostream& output(std::ostream& out, Types... args){
     ( out << ... << args ) << std::endl;
     return out;
 }
@@ -22,14 +22,18 @@ std::ostream& output(std::ostream& out, Types... args){
 
 #ifdef __GNUC__
 
-std::string demangledTypename(std::string_view sv){
+inline std::string demangledTypename(std::string_view sv){
     int status;
     char * realname =  abi::__cxa_demangle(sv.data(),0,0,&status);
     std::string name(realname); free(realname);
     return name;
 }
 
+template<typename T>
+struct ThisIsAType{};
+
 #define typenameof(a) demangledTypename(typeid(a).name())
+#define nameoftype(t) demangledTypename(typeid(ThisIsAType<t>()).name())
 
 #endif
 
