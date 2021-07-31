@@ -18,10 +18,14 @@
 namespace facilities{
 
 // a set of tool functions
-// TODO : how to make this comfortably usable for any basic_string<T>?
 
-template<typename T=char>
-inline std::vector<std::basic_string<T> > split(const std::basic_string<T>& s, T token=' '){    
+template<typename T, size_t N>
+inline std::basic_string<T> convert(const char(&arr)[N]){
+    return std::basic_string<T>(arr,arr+N-1); //minus the null char.
+}
+
+template<typename T, typename U=char>
+inline std::vector<std::basic_string<T> > split(const std::basic_string<T>& s, U token=' '){    
     size_t count=0;
     for(const T& x: s){
         if(x==token) ++count;
@@ -30,8 +34,7 @@ inline std::vector<std::basic_string<T> > split(const std::basic_string<T>& s, T
     size_t length=0,count2=0;
     for(size_t i=0;i<s.size();++i){
         if(s[i] == token){
-            if(length==0) ret[count2++] = std::basic_string<T>();
-            else ret[count2++] = s.substr(i-length, length);
+            ret[count2++] = s.substr(i-length, length);
             length=0;
         }
         else ++length;
@@ -43,19 +46,21 @@ inline std::vector<std::basic_string<T> > split(const std::basic_string<T>& s, T
 
 //TODO: make an *efficient* split(const s::bs<T>&, const s::bs<T>&)
 
-template<typename T>
-inline auto strip(const std::basic_string<T>& s, std::basic_string<T> toStrip){
+template<typename T, typename U>
+inline auto strip(const std::basic_string<T>& s, std::basic_string<U> toStrip)
+    -> std::basic_string<T>
+{
     size_t begin=0,end=s.size()-1;
     for(;;++begin){
         bool exists = false;
-        for(T x: toStrip){
+        for(U& x: toStrip){
             if(x == s[begin]) { exists=true; break; }
         }
         if(!exists) break;
     }
     for(;;--end){
         bool exists = false;
-        for(T x: toStrip){
+        for(U& x: toStrip){
             if(x == s[end]) { exists=true; break; }
         }
         if(!exists) break;
@@ -64,15 +69,8 @@ inline auto strip(const std::basic_string<T>& s, std::basic_string<T> toStrip){
 }
 
 template<typename T, size_t N>
-inline auto strip(const std::basic_string<T>& s, const T(&toStrip)[N]){
-    std::basic_string<T> arg {toStrip, N};
-    return strip(s, arg);
-}
-
-template<typename T, size_t N>
-inline auto strip(const std::basic_string<T>& s, T toStrip){
-    std::basic_string<T> arg { toStrip };
-    return strip(s, arg);
+inline auto strip(const std::basic_string<T>& s, const char (&toStrip)[N]){
+    return strip(s, convert<T>(toStrip));
 }
 
 #define MAKE_SPECIALIZED_STRIP(ttt,whitespacechars) \
@@ -80,43 +78,41 @@ inline auto strip(const std::basic_string<T>& s, T toStrip){
         return strip(s, whitespacechars); \
     }
 
-MAKE_SPECIALIZED_STRIP(char, std::string(" \n\r\t\f\v") );
+MAKE_SPECIALIZED_STRIP(char, convert<char>(" \n\r\t\f\v"));
+MAKE_SPECIALIZED_STRIP(wchar_t, convert<wchar_t>(" \n\r\t\f\v"));
+MAKE_SPECIALIZED_STRIP(char16_t, convert<char16_t>(" \n\r\t\f\v"));
+MAKE_SPECIALIZED_STRIP(char32_t, convert<char32_t>(" \n\r\t\f\v"));
 //TODO: come up with a viable way to extend this function to utf-8, non-8bit-char contexts(eg. wchar)
 
-template<typename CTR, typename T=char
-/*    typename = std::enable_if_t<
-                    std::is_same< std::decay_t<decltype(std::declval<CTR>[0])>,
-                                  std::basic_string<T> >::value
-               >*/
->
-inline std::basic_string<T> join(CTR&& list, std::basic_string<T> delimiter=""){
-    //TODO: does this really have to take a vector?
+template<typename CTR, typename T>
+inline auto join(CTR&& list, std::basic_string<T> delimiter)
+    -> std::basic_string<typename CTR::value_type::value_type >
+{
     size_t sz=0;
     for(auto& x: list){
         sz += x.size();
     }
     std::basic_string<T> ret;
-    ret.reserve(sz * sizeof(T) + delimiter.size()*(list.size()-1));
+    std::basic_string<T> delim (delimiter.begin(), delimiter.end()); //can we do this without this line?
+
+    ret.reserve(sz * sizeof(T) + delim.size()*(list.size()-1) * sizeof(T) );
     for(auto it = list.begin();it != list.end();++it){
-        if(it!=list.begin()) ret.append(delimiter);
+        if(it!=list.begin()) ret.append(delim);
         ret.append( *it );
     }
     ret.shrink_to_fit();
     return ret;
 }
 
-template<typename CTR, typename T, int N>
-inline auto join(CTR&& list, const T(&delimiter)[N]){
-    std::basic_string<T> arg {delimiter};
-    return join(std::forward<CTR>(list),arg);
+template<typename CTR, typename T = typename std::decay_t<CTR>::value_type::value_type>
+inline auto join(CTR&& list){
+    return join(std::forward<std::remove_reference_t<CTR>>(list), convert<T>(""));
 }
 
-template<typename CTR, typename T>
-inline auto join(CTR&& list, T delimiter){
-    std::basic_string<T> arg {delimiter};
-    return join(std::forward<CTR>(list),arg);
+template<typename CTR, int N, typename T = typename std::decay_t<CTR>::value_type::value_type>
+inline auto join(CTR&& list, const char (&delimiter)[N]){
+    return join(std::forward<std::remove_reference_t<CTR>>(list),convert<T>(delimiter));
 }
-
 
 
 //starts_with co

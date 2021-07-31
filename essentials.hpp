@@ -18,6 +18,18 @@ inline std::ostream& output(std::ostream& out, Types... args){
 #define log(...) output(std::clog, __VA_ARGS__)
 #define err(...) output(std::cerr,__VA_ARGS__)
 
+template<typename T>
+inline std::ostream& iteroutput(std::ostream& out, const T& arg){
+    out << "{";
+    for(auto&& x: arg) out << x << ", ";
+    out << "}"<<std::endl;
+    return out;
+}
+
+#define iterprint(...) iteroutput(std::cout, __VA_ARGS__);
+#define iterlog(...) iteroutput(std::clog, __VA_ARGS__);
+#define itererr(...) iteroutput(std::cerr, __VA_ARGS__);
+
 //only on G++
 
 #ifdef __GNUC__
