@@ -97,5 +97,9 @@ std::vector<T> csv_to_vector(const std::vector<std::string>& arg){
     return to_vector<T>( split(combined, ',' ) );
 }
 
+//write one for MSVC too
+#include "parsermacro.hpp"
+
+
 } //namespace facilities
 #endif
